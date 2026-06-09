@@ -106,4 +106,10 @@ public class UIManager : MonoBehaviour
     {
         GameManager.Instance.Restart();
     }
+
+    // Llamado desde el boton "Menu" en el panel GameOver
+    public void OnMainMenuButton()
+    {
+        GameManager.Instance.GoToMainMenu();
+    }
 }
