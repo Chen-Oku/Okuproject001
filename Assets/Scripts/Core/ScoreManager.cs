@@ -4,8 +4,11 @@ public class ScoreManager : MonoBehaviour
 {
     public static ScoreManager Instance { get; private set; }
 
-    public int Score { get; private set; }
-    public int BestScore { get; private set; }
+    public int Score      { get; private set; }
+    public int BestScore  { get; private set; }
+    public int ComboStreak { get; private set; }
+
+    const int MaxCombo = 10;
 
     void Awake()
     {
@@ -14,10 +17,25 @@ public class ScoreManager : MonoBehaviour
         BestScore = PlayerPrefs.GetInt("BestScore", 0);
     }
 
+    // Mantener compatibilidad con cualquier llamada directa existente
     public void AddScore(int amount = 1)
     {
         Score += amount;
         UIManager.Instance.UpdateScore(Score);
+    }
+
+    public void AddScoreWithCombo(bool skipped)
+    {
+        if (skipped)
+            ComboStreak = Mathf.Min(ComboStreak + 1, MaxCombo);
+        else
+            ComboStreak = 0;
+
+        int points = Mathf.Max(1, ComboStreak);
+        Score += points;
+
+        UIManager.Instance.UpdateScore(Score);
+        UIManager.Instance.UpdateCombo(ComboStreak);
     }
 
     public void SaveBestScore()
