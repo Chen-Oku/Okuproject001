@@ -31,6 +31,9 @@ public class HelixGenerator : MonoBehaviour
     [SerializeField] Material firePowerupMat;
     [SerializeField] Material ghostPowerupMat;
     [SerializeField] Material slowPowerupMat;
+    [SerializeField] GameObject firePowerupVFX;
+    [SerializeField] GameObject ghostPowerupVFX;
+    [SerializeField] GameObject slowPowerupVFX;
 
     [Header("Materials")]
     [SerializeField] Material safeMaterial;
@@ -38,6 +41,17 @@ public class HelixGenerator : MonoBehaviour
     [SerializeField] Material crumblingMaterial;
     [SerializeField] Material bouncyMaterial;
     [SerializeField] Material checkpointMaterial;
+    [SerializeField] Material fireLockedMaterial;
+
+    [Header("Tutorial / Progresion")]
+    [SerializeField] int tutorialRingCount      = 30;
+    [SerializeField] int tutorialSafeRingCount  = 5;
+    [SerializeField] int tutorialFireRingIndex  = 8;
+    [SerializeField] int tutorialGhostRingIndex = 15;
+    [SerializeField] int tutorialSlowRingIndex  = 22;
+
+    public static HelixGenerator Instance { get; private set; }
+    public int TutorialRingCount => tutorialRingCount;
 
     const float SegW = 1.35f;
     const float SegH = 0.28f;
@@ -46,6 +60,12 @@ public class HelixGenerator : MonoBehaviour
     readonly List<Transform> activeRings = new();
     float nextRingY;
     int   ringIndex;
+
+    void Awake()
+    {
+        if (Instance != null) { Destroy(gameObject); return; }
+        Instance = this;
+    }
 
     void Start()
     {
@@ -76,44 +96,99 @@ public class HelixGenerator : MonoBehaviour
         float zoneAutoChance = autoRotateChance + (zone == ZoneManager.Zone.Lava ? 0.2f : 0f);
         float zoneMaxSpeed   = maxRotateSpeed   * (zone == ZoneManager.Zone.Lava ? 1.5f : 1f);
 
+        // Tutorial: anillos iniciales con generacion guiada para introducir powerups y mecanicas.
+        // Se basa en ringIndex (nunca se reinicia), por lo que no vuelve a ocurrir al ciclar zonas.
+        bool inTutorial         = ringIndex < tutorialRingCount;
+        bool suppressAutoRotate = inTutorial;
+        bool forceAllSafe       = ringIndex < tutorialSafeRingCount;
+
+        BallController.BallPowerup? forcedPowerup = null;
+        Dictionary<int, RingSegment.SegmentType> forcedTypeMap = null;
+        HashSet<int> forcedGaps = null;
+
+        if (ringIndex == tutorialFireRingIndex)
+            forcedPowerup = BallController.BallPowerup.Fire;
+        else if (ringIndex == tutorialGhostRingIndex)
+            forcedPowerup = BallController.BallPowerup.Ghost;
+        else if (ringIndex == tutorialSlowRingIndex)
+            forcedPowerup = BallController.BallPowerup.Slow;
+        else if (ringIndex == tutorialFireRingIndex + 1)
+        {
+            // Anillo cerrado: solo el fuego destruye estos segmentos y permite pasar
+            forcedTypeMap = new Dictionary<int, RingSegment.SegmentType>();
+            for (int i = 0; i < segmentsPerRing; i++) forcedTypeMap[i] = RingSegment.SegmentType.FireLocked;
+            forcedGaps = new HashSet<int>();
+        }
+        else if (ringIndex == tutorialGhostRingIndex + 1)
+        {
+            // Anillo cerrado de peligro: solo el ghost permite atravesarlo
+            forcedTypeMap = new Dictionary<int, RingSegment.SegmentType>();
+            for (int i = 0; i < segmentsPerRing; i++) forcedTypeMap[i] = RingSegment.SegmentType.Dangerous;
+            forcedGaps = new HashSet<int>();
+        }
+        else if (ringIndex == tutorialSlowRingIndex + 1)
+        {
+            // Huecos opuestos entre si: con el slow activo da tiempo de girar y alinearse
+            forcedGaps = new HashSet<int> { 0, segmentsPerRing / 2 };
+        }
+        else if (ringIndex == tutorialRingCount - 1)
+        {
+            // Ultimo anillo del tutorial: escudo garantizado antes de pasar a la zona normal
+            forcedTypeMap = new Dictionary<int, RingSegment.SegmentType>();
+            for (int i = 0; i < segmentsPerRing; i++) forcedTypeMap[i] = RingSegment.SegmentType.Checkpoint;
+            forcedGaps = new HashSet<int>();
+        }
+
         var ring = new GameObject($"Ring_{ringIndex}").transform;
         ring.SetParent(transform);
         ring.localPosition = new Vector3(0f, nextRingY, 0f);
 
-        // Fisher-Yates shuffle
-        var indices = new List<int>(segmentsPerRing);
-        for (int i = 0; i < segmentsPerRing; i++) indices.Add(i);
-        for (int i = indices.Count - 1; i > 0; i--)
+        // Asignar tipos y huecos
+        var typeMap = forcedTypeMap;
+        var gapSet  = forcedGaps ?? new HashSet<int>();
+
+        if (typeMap == null)
         {
-            int j = Random.Range(0, i + 1);
-            (indices[i], indices[j]) = (indices[j], indices[i]);
+            typeMap = new Dictionary<int, RingSegment.SegmentType>();
+
+            // Fisher-Yates shuffle del pool de indices disponibles (sin los huecos forzados)
+            var pool = new List<int>(segmentsPerRing);
+            for (int i = 0; i < segmentsPerRing; i++)
+                if (!gapSet.Contains(i)) pool.Add(i);
+            for (int i = pool.Count - 1; i > 0; i--)
+            {
+                int j = Random.Range(0, i + 1);
+                (pool[i], pool[j]) = (pool[j], pool[i]);
+            }
+
+            // Asignar tipos en orden de prioridad consumiendo el pool mezclado
+            int cursor = 0;
+            void Assign(RingSegment.SegmentType type, int count)
+            {
+                for (int i = 0; i < count && cursor < pool.Count; i++, cursor++)
+                    typeMap[pool[cursor]] = type;
+            }
+
+            if (!forceAllSafe)
+            {
+                Assign(RingSegment.SegmentType.Dangerous,   zoneDanger);
+                Assign(RingSegment.SegmentType.Crumbling,   crumblingPerRing);
+                Assign(RingSegment.SegmentType.Bouncy,      bouncyPerRing);
+
+                bool spawnCheckpoint = !inTutorial
+                                       && checkpointEveryNRings > 0
+                                       && ringIndex >= checkpointEveryNRings
+                                       && ringIndex % checkpointEveryNRings == 0
+                                       && cursor < pool.Count;
+                if (spawnCheckpoint)
+                    Assign(RingSegment.SegmentType.Checkpoint, 1);
+            }
+
+            // Huecos restantes (si no fueron forzados): siguientes indices del pool mezclado
+            if (forcedGaps == null)
+                for (int i = 0; i < zoneGaps && cursor < pool.Count; i++, cursor++)
+                    gapSet.Add(pool[cursor]);
         }
-
-        // Asignar tipos en orden de prioridad consumiendo el pool mezclado
-        int cursor = 0;
-        var typeMap = new Dictionary<int, RingSegment.SegmentType>();
-
-        Assign(RingSegment.SegmentType.Dangerous,   zoneDanger);
-        Assign(RingSegment.SegmentType.Crumbling,   crumblingPerRing);
-        Assign(RingSegment.SegmentType.Bouncy,      bouncyPerRing);
-
-        bool spawnCheckpoint = checkpointEveryNRings > 0
-                               && ringIndex >= checkpointEveryNRings
-                               && ringIndex % checkpointEveryNRings == 0
-                               && cursor < indices.Count;
-        if (spawnCheckpoint)
-            Assign(RingSegment.SegmentType.Checkpoint, 1);
-
-        void Assign(RingSegment.SegmentType type, int count)
-        {
-            for (int i = 0; i < count && cursor < indices.Count; i++, cursor++)
-                typeMap[indices[cursor]] = type;
-        }
-
-        // Gaps: los siguientes indices se omiten al spawnear
-        var gapSet = new HashSet<int>();
-        for (int i = 0; i < zoneGaps && cursor < indices.Count; i++, cursor++)
-            gapSet.Add(indices[cursor]);
 
         // Spawnear segmentos
         float angleStep = 360f / segmentsPerRing;
@@ -149,15 +224,25 @@ public class HelixGenerator : MonoBehaviour
 
         // Powerup pickup en la trayectoria real del ball (su X/Z en world space)
         // No se parentea al ring para que no rote con la helice
-        if (powerupSpawnChance > 0f && Random.value < powerupSpawnChance)
+        bool spawnPowerup = forcedPowerup.HasValue
+                            || (!inTutorial && powerupSpawnChance > 0f && Random.value < powerupSpawnChance);
+        if (spawnPowerup)
         {
-            var powerupTypes = new[]
+            BallController.BallPowerup pType;
+            if (forcedPowerup.HasValue)
             {
-                BallController.BallPowerup.Fire,
-                BallController.BallPowerup.Ghost,
-                BallController.BallPowerup.Slow,
-            };
-            var pType = powerupTypes[Random.Range(0, powerupTypes.Length)];
+                pType = forcedPowerup.Value;
+            }
+            else
+            {
+                var powerupTypes = new[]
+                {
+                    BallController.BallPowerup.Fire,
+                    BallController.BallPowerup.Ghost,
+                    BallController.BallPowerup.Slow,
+                };
+                pType = powerupTypes[Random.Range(0, powerupTypes.Length)];
+            }
 
             var pickup = GameObject.CreatePrimitive(PrimitiveType.Sphere).transform;
             // Posicion en world space: X/Z del ball, Y a mitad entre este anillo y el siguiente
@@ -169,11 +254,11 @@ public class HelixGenerator : MonoBehaviour
             sc.radius    = 0.7f;
             sc.isTrigger = true;
 
-            pickup.gameObject.AddComponent<PowerupPickup>().Setup(pType, powerupDuration, MaterialForPowerup(pType), ball);
+            pickup.gameObject.AddComponent<PowerupPickup>().Setup(pType, powerupDuration, MaterialForPowerup(pType), VFXForPowerup(pType), ball);
         }
 
         // Auto-rotación individual del anillo
-        if (zoneAutoChance > 0f && Random.value < zoneAutoChance)
+        if (!suppressAutoRotate && zoneAutoChance > 0f && Random.value < zoneAutoChance)
         {
             float speed = Random.Range(minRotateSpeed, zoneMaxSpeed);
             if (Random.value < 0.5f) speed = -speed;
@@ -191,6 +276,7 @@ public class HelixGenerator : MonoBehaviour
         RingSegment.SegmentType.Crumbling  => crumblingMaterial  != null ? crumblingMaterial  : dangerMaterial,
         RingSegment.SegmentType.Bouncy     => bouncyMaterial     != null ? bouncyMaterial     : safeMaterial,
         RingSegment.SegmentType.Checkpoint => checkpointMaterial != null ? checkpointMaterial : safeMaterial,
+        RingSegment.SegmentType.FireLocked => fireLockedMaterial != null ? fireLockedMaterial : dangerMaterial,
         _                                  => safeMaterial,
     };
 
@@ -200,5 +286,13 @@ public class HelixGenerator : MonoBehaviour
         BallController.BallPowerup.Ghost => ghostPowerupMat != null ? ghostPowerupMat : safeMaterial,
         BallController.BallPowerup.Slow  => slowPowerupMat  != null ? slowPowerupMat  : safeMaterial,
         _                                => safeMaterial,
+    };
+
+    GameObject VFXForPowerup(BallController.BallPowerup type) => type switch
+    {
+        BallController.BallPowerup.Fire  => firePowerupVFX,
+        BallController.BallPowerup.Ghost => ghostPowerupVFX,
+        BallController.BallPowerup.Slow  => slowPowerupVFX,
+        _                                 => null,
     };
 }

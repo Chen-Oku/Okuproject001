@@ -4,7 +4,9 @@ public class CameraFollow : MonoBehaviour
 {
     [SerializeField] Transform target;
     [SerializeField] float smoothSpeed = 6f;
-    [SerializeField] float yOffset = 8f;
+    // Camara fija en X/Z, inclinada hacia abajo: a menor yOffset, la bola sube en pantalla
+    // y queda mas espacio visible debajo de ella (anillos proximos).
+    [SerializeField] float yOffset = 2f;
 
     void LateUpdate()
     {

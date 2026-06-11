@@ -368,7 +368,7 @@ Camera:
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
-  m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
+  m_BackGroundColor: {r: 0.1019608, g: 0.0862745, b: 0.0666667, a: 1}
   m_projectionMatrixMode: 1
   m_GateFitMode: 2
   m_FOVAxisMode: 0
@@ -482,7 +482,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
   target: {fileID: 1977209903}
   smoothSpeed: 6
-  yOffset: 4
+  yOffset: 2
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -1670,10 +1670,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ZoneManager
   ringsPerZone: 15
-  normalColor: {r: 0.05, g: 0.05, b: 0.08, a: 1}
-  lavaColor: {r: 0.15, g: 0.02, b: 0, a: 1}
-  iceColor: {r: 0, g: 0.05, b: 0.15, a: 1}
-  voidColor: {r: 0.05, g: 0, b: 0.12, a: 1}
+  normalColor: {r: 0.1019608, g: 0.0862745, b: 0.0666667, a: 1}
+  lavaColor: {r: 0.1686275, g: 0.054902, b: 0.0156863, a: 1}
+  iceColor: {r: 0.0470588, g: 0.1176471, b: 0.1490196, a: 1}
+  voidColor: {r: 0.0823529, g: 0.0627451, b: 0.1215686, a: 1}
 --- !u!1 &1632405217
 GameObject:
   m_ObjectHideFlags: 0
@@ -2213,6 +2213,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BallController
   maxFallSpeed: 15
   slowFallSpeed: 5
+  firePowerupVFX: {fileID: 7286490769855947201, guid: a7822f02d59dfe749a56162ac5a733ff, type: 3}
+  ghostPowerupVFX: {fileID: 7286490769855947201, guid: da60235b401cdba4aa23795761a60375, type: 3}
+  slowPowerupVFX: {fileID: 7286490769855947201, guid: c8c4d50dcd973d54ba557b2ae60df7ce, type: 3}
 --- !u!54 &1977209905
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -2639,11 +2642,18 @@ MonoBehaviour:
   firePowerupMat: {fileID: 2100000, guid: 124f819d69979ae4188450b110d7970f, type: 2}
   ghostPowerupMat: {fileID: 2100000, guid: e4b1fa35ea278de44b80cde517856d40, type: 2}
   slowPowerupMat: {fileID: 2100000, guid: a946e4092f94fe7429d101d26069ac33, type: 2}
+  firePowerupVFX: {fileID: 0}
+  ghostPowerupVFX: {fileID: 0}
+  slowPowerupVFX: {fileID: 0}
   safeMaterial: {fileID: 2100000, guid: eeb0043223e7cb64d8752293da866346, type: 2}
   dangerMaterial: {fileID: 2100000, guid: 8311e3c0ddf1f54428f862e1fc9fa7ec, type: 2}
   crumblingMaterial: {fileID: 2100000, guid: 43ba0a07524a57d4cbf164fc3591d65e, type: 2}
   bouncyMaterial: {fileID: 2100000, guid: 9c3670c3e7b88e94bb5cfe982e0e8ca0, type: 2}
   checkpointMaterial: {fileID: 2100000, guid: 6682d83062181094987d0916f61f574f, type: 2}
+  fireLockedMaterial: {fileID: 2100000, guid: ba8951e6550371e41afb3c2f5bc2e593, type: 2}
+  tutorialFireRingIndex: 2
+  tutorialGhostRingIndex: 5
+  tutorialSlowRingIndex: 8
 --- !u!1 &2118996364
 GameObject:
   m_ObjectHideFlags: 0

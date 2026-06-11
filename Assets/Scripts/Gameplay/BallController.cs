@@ -9,6 +9,11 @@ public class BallController : MonoBehaviour
     [SerializeField] float maxFallSpeed  = 15f;
     [SerializeField] float slowFallSpeed = 5f;
 
+    [Header("Powerup VFX")]
+    [SerializeField] GameObject firePowerupVFX;
+    [SerializeField] GameObject ghostPowerupVFX;
+    [SerializeField] GameObject slowPowerupVFX;
+
     Rigidbody rb;
     Renderer  rend;
     Color     originalColor;
@@ -16,6 +21,11 @@ public class BallController : MonoBehaviour
 
     Coroutine shieldRoutine;
     Coroutine powerupRoutine;
+
+    GameObject fireVFX, ghostVFX, slowVFX;
+    GameObject activeVFX;
+    Quaternion activeVFXRestRotation = Quaternion.identity;
+    bool       vfxFlippedUp;
 
     public bool        HasShield     { get; private set; }
     public BallPowerup ActivePowerup { get; private set; }
@@ -28,6 +38,19 @@ public class BallController : MonoBehaviour
         rb   = GetComponent<Rigidbody>();
         rend = GetComponent<Renderer>();
         if (rend != null) originalColor = rend.material.color;
+
+        fireVFX  = SpawnVFX(firePowerupVFX);
+        ghostVFX = SpawnVFX(ghostPowerupVFX);
+        slowVFX  = SpawnVFX(slowPowerupVFX);
+    }
+
+    GameObject SpawnVFX(GameObject prefab)
+    {
+        if (prefab == null) return null;
+        var instance = Instantiate(prefab, transform);
+        instance.transform.localPosition = Vector3.zero;
+        instance.SetActive(false);
+        return instance;
     }
 
     void FixedUpdate()
@@ -36,6 +59,22 @@ public class BallController : MonoBehaviour
         if (rb.linearVelocity.y < -CurrentMaxFallSpeed)
             rb.linearVelocity = new Vector3(0f, -CurrentMaxFallSpeed, 0f);
         rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+
+        UpdateVFXOrientation();
+    }
+
+    // Voltea el VFX activo 180° en X para que la emision siga el sentido vertical real del ball
+    void UpdateVFXOrientation()
+    {
+        if (activeVFX == null) return;
+
+        bool movingUp = rb.linearVelocity.y > 0f;
+        if (movingUp == vfxFlippedUp) return;
+
+        vfxFlippedUp = movingUp;
+        activeVFX.transform.localRotation = movingUp
+            ? activeVFXRestRotation * Quaternion.Euler(180f, 0f, 0f)
+            : activeVFXRestRotation;
     }
 
     // ── Combo ────────────────────────────────────────────────
@@ -93,10 +132,34 @@ public class BallController : MonoBehaviour
     {
         ActivePowerup = powerup;
         if (!HasShield) RefreshColor();
+        SetActiveVFX(powerup);
         yield return new WaitForSeconds(duration);
         ActivePowerup = BallPowerup.None;
         if (!HasShield) RefreshColor();
+        SetActiveVFX(BallPowerup.None);
         powerupRoutine = null;
+    }
+
+    void SetActiveVFX(BallPowerup powerup)
+    {
+        if (activeVFX != null)
+        {
+            activeVFX.transform.localRotation = activeVFXRestRotation;
+            activeVFX.SetActive(false);
+        }
+        activeVFX = powerup switch
+        {
+            BallPowerup.Fire  => fireVFX,
+            BallPowerup.Ghost => ghostVFX,
+            BallPowerup.Slow  => slowVFX,
+            _                 => null,
+        };
+        if (activeVFX != null)
+        {
+            activeVFXRestRotation = activeVFX.transform.localRotation;
+            vfxFlippedUp = false;
+            activeVFX.SetActive(true);
+        }
     }
 
     void RefreshColor()

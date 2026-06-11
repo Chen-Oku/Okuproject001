@@ -4,7 +4,7 @@ using UnityEngine;
 [RequireComponent(typeof(Renderer))]
 public class RingSegment : MonoBehaviour
 {
-    public enum SegmentType { Safe, Dangerous, Crumbling, Bouncy, Checkpoint }
+    public enum SegmentType { Safe, Dangerous, Crumbling, Bouncy, Checkpoint, FireLocked }
 
     [SerializeField] float bounceForce  = 10f;
     [SerializeField] float crumbleDelay = 0.45f;
@@ -64,6 +64,13 @@ public class RingSegment : MonoBehaviour
                 consumed = true;
                 ball.ActivateShield();
                 gameObject.SetActive(false);
+                break;
+
+            case SegmentType.FireLocked:
+                // Solo el powerup de fuego permite destruirlo y pasar
+                if (ball.ActivePowerup == BallController.BallPowerup.Fire)
+                    { consumed = true; Destroy(gameObject); return; }
+                ball.Die();
                 break;
         }
     }

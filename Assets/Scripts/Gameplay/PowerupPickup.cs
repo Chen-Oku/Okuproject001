@@ -10,13 +10,19 @@ public class PowerupPickup : MonoBehaviour
 
     const float DespawnDistanceBelow = 12f;
 
-    public void Setup(BallController.BallPowerup powerupType, float dur, Material mat, Transform ball)
+    public void Setup(BallController.BallPowerup powerupType, float dur, Material mat, GameObject vfxPrefab, Transform ball)
     {
         type           = powerupType;
         duration       = dur;
         ballTransform  = ball;
         baseY          = transform.position.y;
         GetComponent<Renderer>().material = mat;
+
+        if (vfxPrefab != null)
+        {
+            var vfx = Instantiate(vfxPrefab, transform);
+            vfx.transform.localPosition = Vector3.zero;
+        }
     }
 
     void Update()

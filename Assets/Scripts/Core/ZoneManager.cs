@@ -10,11 +10,11 @@ public class ZoneManager : MonoBehaviour
 
     [SerializeField] int ringsPerZone = 15;
 
-    [Header("Colores de fondo por zona")]
-    [SerializeField] Color normalColor = new Color(0.05f, 0.05f, 0.08f);
-    [SerializeField] Color lavaColor   = new Color(0.15f, 0.02f, 0f);
-    [SerializeField] Color iceColor    = new Color(0f,    0.05f, 0.15f);
-    [SerializeField] Color voidColor   = new Color(0.05f, 0f,    0.12f);
+    [Header("Colores de fondo por zona (estratos del pozo)")]
+    [SerializeField] Color normalColor = new Color(0.1019608f, 0.0862745f, 0.0666667f); // Tierra
+    [SerializeField] Color lavaColor   = new Color(0.1686275f, 0.0549020f, 0.0156863f); // Magma
+    [SerializeField] Color iceColor    = new Color(0.0470588f, 0.1176471f, 0.1490196f); // Glaciar
+    [SerializeField] Color voidColor   = new Color(0.0823529f, 0.0627451f, 0.1215686f); // Abismo
 
     static readonly Zone[] Cycle = { Zone.Normal, Zone.Lava, Zone.Ice, Zone.Void };
 
@@ -34,7 +34,12 @@ public class ZoneManager : MonoBehaviour
     public void NotifyRingPassed()
     {
         ringsPassed++;
-        int idx     = (ringsPassed / ringsPerZone) % Cycle.Length;
+
+        // El tutorial cuenta como zona Normal y no entra en el ciclo de zonas
+        int tutorialRings = HelixGenerator.Instance != null ? HelixGenerator.Instance.TutorialRingCount : 0;
+        int cycleRings    = Mathf.Max(0, ringsPassed - tutorialRings);
+
+        int idx     = (cycleRings / ringsPerZone) % Cycle.Length;
         var newZone = Cycle[idx];
 
         if (newZone == CurrentZone) return;
