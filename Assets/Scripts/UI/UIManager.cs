@@ -12,6 +12,13 @@ public class UIManager : MonoBehaviour
     [SerializeField] GameObject gameOverPanel;
     [SerializeField] TextMeshProUGUI finalScoreText;
     [SerializeField] TextMeshProUGUI bestScoreText;
+    [SerializeField] GameObject pauseButton;
+
+    [Header("Leaderboard - Game Over")]
+    [SerializeField] GameObject nameEntryGroup;
+    [SerializeField] TMP_InputField nameInputField;
+    [SerializeField] GameObject saveScoreButton;
+    [SerializeField] TextMeshProUGUI savedMessageText;
 
     Coroutine comboPulse;
     Coroutine zoneAnnounce;
@@ -24,6 +31,7 @@ public class UIManager : MonoBehaviour
         scoreText.text = "0";
         if (comboText != null) comboText.gameObject.SetActive(false);
         if (zoneText  != null) zoneText.gameObject.SetActive(false);
+        if (nameInputField != null) nameInputField.characterLimit = LeaderboardManager.MaxNameLength;
     }
 
     public void UpdateScore(int score)
@@ -96,9 +104,42 @@ public class UIManager : MonoBehaviour
     {
         if (comboText != null) comboText.gameObject.SetActive(false);
         if (zoneText  != null) zoneText.gameObject.SetActive(false);
-        finalScoreText.text = ScoreManager.Instance.Score.ToString();
-        bestScoreText.text = $"MEJOR: {ScoreManager.Instance.BestScore}";
+        int score = ScoreManager.Instance.Score;
+        finalScoreText.text = score.ToString();
+        bestScoreText.text = $"Best Score: {ScoreManager.Instance.BestScore}";
         gameOverPanel.SetActive(true);
+        if (pauseButton != null) pauseButton.SetActive(false);
+
+        if (nameEntryGroup != null)
+        {
+            bool qualifies = LeaderboardManager.QualifiesForLeaderboard(score);
+            nameEntryGroup.SetActive(qualifies);
+            if (qualifies)
+            {
+                if (nameInputField != null)
+                {
+                    nameInputField.gameObject.SetActive(true);
+                    nameInputField.text = "";
+                }
+                if (saveScoreButton != null) saveScoreButton.SetActive(true);
+                if (savedMessageText != null) savedMessageText.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    // Llamado desde el boton "Guardar" del campo de nombre en GameOver
+    public void OnSaveScoreButton()
+    {
+        if (nameInputField == null) return;
+        LeaderboardManager.AddScore(nameInputField.text, ScoreManager.Instance.Score);
+
+        nameInputField.gameObject.SetActive(false);
+        if (saveScoreButton != null) saveScoreButton.SetActive(false);
+        if (savedMessageText != null)
+        {
+            savedMessageText.text = "Saved Score!";
+            savedMessageText.gameObject.SetActive(true);
+        }
     }
 
     // Llamado desde el boton "Reintentar" en el panel GameOver

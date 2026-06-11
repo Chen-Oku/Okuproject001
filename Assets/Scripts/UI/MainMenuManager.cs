@@ -1,5 +1,7 @@
+using System.Text;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 using TMPro;
 
@@ -12,7 +14,8 @@ public class MainMenuManager : MonoBehaviour
     [SerializeField] GameObject settingsPanel;
 
     [Header("Scores Panel")]
-    [SerializeField] TextMeshProUGUI bestScoreText;
+    [FormerlySerializedAs("bestScoreText")]
+    [SerializeField] TextMeshProUGUI leaderboardText;
 
     [Header("Settings Panel")]
     [SerializeField] Toggle musicToggle;
@@ -41,10 +44,17 @@ public class MainMenuManager : MonoBehaviour
     public void OnScoresButton()
     {
         PlayClick();
-        int best = PlayerPrefs.GetInt("BestScore", 0);
-        if (bestScoreText != null)
-            bestScoreText.text = best > 0 ? best.ToString() : "---";
+        RefreshLeaderboard();
         ShowPanel(scoresPanel);
+    }
+
+    public void OnClearScoresButton()
+    {
+        PlayClick();
+        LeaderboardManager.Clear();
+        PlayerPrefs.SetInt("BestScore", 0);
+        PlayerPrefs.Save();
+        RefreshLeaderboard();
     }
 
     public void OnHowToPlayButton()
@@ -88,6 +98,24 @@ public class MainMenuManager : MonoBehaviour
     }
 
     // --- Helpers ---
+
+    void RefreshLeaderboard()
+    {
+        if (leaderboardText == null) return;
+
+        var entries = LeaderboardManager.GetEntries();
+        var sb = new StringBuilder();
+
+        for (int i = 0; i < LeaderboardManager.MaxEntries; i++)
+        {
+            if (i < entries.Count)
+                sb.AppendLine($"{i + 1,2}. {entries[i].Name,-10} {entries[i].Score}");
+            else
+                sb.AppendLine($"{i + 1,2}. {"---",-10} ---");
+        }
+
+        leaderboardText.text = sb.ToString();
+    }
 
     void ShowPanel(GameObject target)
     {
