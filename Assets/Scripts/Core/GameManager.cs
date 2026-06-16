@@ -5,14 +5,20 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    public enum State { Playing, Paused, GameOver }
-    public State CurrentState { get; private set; } = State.Playing;
+    public enum State { WaitingToStart, Playing, Paused, GameOver }
+    public State CurrentState { get; private set; } = State.WaitingToStart;
 
     void Awake()
     {
         if (Instance != null) { Destroy(gameObject); return; }
         Instance = this;
         Time.timeScale = 1f;
+    }
+
+    public void StartGame()
+    {
+        if (CurrentState != State.WaitingToStart) return;
+        CurrentState = State.Playing;
     }
 
     public void TriggerGameOver()

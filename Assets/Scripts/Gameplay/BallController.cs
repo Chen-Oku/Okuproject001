@@ -55,7 +55,7 @@ public class BallController : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (isDead) return;
+        if (isDead || rb.isKinematic) return;
         if (rb.linearVelocity.y < -CurrentMaxFallSpeed)
             rb.linearVelocity = new Vector3(0f, -CurrentMaxFallSpeed, 0f);
         rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
