@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -7,6 +8,10 @@ public class ZoneManager : MonoBehaviour
 
     public static ZoneManager Instance { get; private set; }
     public Zone CurrentZone { get; private set; }
+    public int RingsPassed => ringsPassed;
+
+    // Analytics: se dispara cada vez que se entra a una zona nueva.
+    public static event Action<string /*zoneName*/, int /*depth*/> OnZoneReached;
 
     [SerializeField] int ringsPerZone = 15;
 
@@ -47,6 +52,7 @@ public class ZoneManager : MonoBehaviour
         CurrentZone = newZone;
         ApplyZoneVisual();
         UIManager.Instance?.ShowZoneAnnouncement(ZoneName(CurrentZone));
+        OnZoneReached?.Invoke(ZoneName(CurrentZone), ringsPassed);
     }
 
     void ApplyZoneVisual()

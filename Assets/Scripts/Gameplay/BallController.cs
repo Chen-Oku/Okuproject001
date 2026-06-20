@@ -175,7 +175,7 @@ public class BallController : MonoBehaviour
     }
 
     // ── Death ────────────────────────────────────────────────
-    public void Die()
+    public void Die(string cause = "Unknown")
     {
         if (isDead) return;
 
@@ -189,6 +189,6 @@ public class BallController : MonoBehaviour
 
         isDead = true;
         rb.isKinematic = true;
-        GameManager.Instance.TriggerGameOver();
+        GameManager.Instance.TriggerGameOver(cause);
     }
 }

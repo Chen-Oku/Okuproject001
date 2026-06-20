@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -7,6 +8,12 @@ public class GameManager : MonoBehaviour
 
     public enum State { WaitingToStart, Playing, Paused, GameOver }
     public State CurrentState { get; private set; } = State.WaitingToStart;
+
+    // Analytics: publicados para que sistemas nuevos (AnalyticsManager) escuchen sin acoplar este manager a ellos.
+    public static event Action OnRunStart;
+    public static event Action<int /*depth*/, string /*cause*/, float /*durationSeconds*/> OnRunEnd;
+
+    float runStartTime;
 
     void Awake()
     {
@@ -19,14 +26,19 @@ public class GameManager : MonoBehaviour
     {
         if (CurrentState != State.WaitingToStart) return;
         CurrentState = State.Playing;
+        runStartTime = Time.time;
+        OnRunStart?.Invoke();
     }
 
-    public void TriggerGameOver()
+    public void TriggerGameOver(string cause = "Unknown")
     {
         if (CurrentState == State.GameOver) return;
         CurrentState = State.GameOver;
         ScoreManager.Instance.SaveBestScore();
         UIManager.Instance.ShowGameOver();
+
+        int depth = ZoneManager.Instance != null ? ZoneManager.Instance.RingsPassed : 0;
+        OnRunEnd?.Invoke(depth, cause, Time.time - runStartTime);
     }
 
     public void Pause()

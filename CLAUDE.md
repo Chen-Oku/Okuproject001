@@ -27,7 +27,8 @@ Assets/
 ├── Scripts/Core/      GameManager, ZoneManager, ScoreManager, AudioManager,
 │                      LeaderboardManager, PauseInputHandler
 ├── Scripts/Gameplay/  HelixGenerator (central), HelixRotator, RingSegment,
-│                      CameraFollow, IntroPlatform
+│                      BallController, ScoreTrigger, PowerupPickup,
+│                      RingAutoRotator, CameraFollow, IntroPlatform
 ├── Scripts/UI/        UIManager, MainMenuManager, PauseMenuManager
 ├── Scenes/            MainMenu.unity, Game.unity
 ├── Materials/, Mesh/, Textures/, Art/ArtBrief.md
@@ -43,6 +44,14 @@ Assets/
 - **HelixRotator** — rotación táctil del anillo actual.
 - **RingSegment** — 6 tipos: Safe, Dangerous, Crumbling, Bouncy, Checkpoint
   (escudo), FireLocked.
+- **BallController** — estado y físicas de la esfera: clamp de velocidad de
+  caída, escudo (Checkpoint), powerups activos (color/VFX), `Die()` →
+  `GameManager.TriggerGameOver()`.
+- **ScoreTrigger** — collider por anillo; al pasarlo decide si fue "saltado"
+  (sin tocar segmento) y llama a `ScoreManager.AddScoreWithCombo`.
+- **PowerupPickup / RingAutoRotator** — spawneados por HelixGenerator: pickup
+  giratorio que activa powerup en `BallController`; rotación automática extra
+  de un anillo (efecto de dificultad).
 - **ZoneManager** — 4 zonas cíclicas (Normal → Lava → Ice → Void) cada 15
   anillos; Ice añade inercia de rotación, Void aumenta velocidad de caída.
 - **ScoreManager** — score y combo (combo sube al "saltar" un anillo sin tocar

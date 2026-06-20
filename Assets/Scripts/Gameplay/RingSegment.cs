@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -10,6 +11,9 @@ public class RingSegment : MonoBehaviour
     [SerializeField] float crumbleDelay = 0.45f;
 
     public SegmentType Type { get; private set; }
+
+    // Feedback de impacto (shake/FOV); no acopla este script a quien escuche.
+    public static event Action<SegmentType> OnSegmentImpact;
 
     Renderer rend;
     bool consumed;
@@ -27,6 +31,8 @@ public class RingSegment : MonoBehaviour
         if (consumed) return;
         if (!col.gameObject.TryGetComponent<BallController>(out var ball)) return;
 
+        OnSegmentImpact?.Invoke(Type);
+
         switch (Type)
         {
             case SegmentType.Dangerous:
@@ -37,7 +43,7 @@ public class RingSegment : MonoBehaviour
                     ball.PassThrough();
                     return;
                 }
-                ball.Die();
+                ball.Die(Type.ToString());
                 break;
 
             case SegmentType.Safe:
@@ -70,7 +76,7 @@ public class RingSegment : MonoBehaviour
                 // Solo el powerup de fuego permite destruirlo y pasar
                 if (ball.ActivePowerup == BallController.BallPowerup.Fire)
                     { consumed = true; Destroy(gameObject); return; }
-                ball.Die();
+                ball.Die(Type.ToString());
                 break;
         }
     }
