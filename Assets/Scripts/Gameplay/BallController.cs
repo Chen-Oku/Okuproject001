@@ -36,6 +36,10 @@ public class BallController : MonoBehaviour
     void Awake()
     {
         rb   = GetComponent<Rigidbody>();
+        // Sin esto, la posicion solo avanza en cada paso de FixedUpdate y se
+        // ve a saltos contra CameraFollow/BallUIFollower, que leen transform.
+        // position cada frame de render (tasa distinta a la fisica).
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
         rend = GetComponent<Renderer>();
         if (rend != null) originalColor = rend.material.color;
 
