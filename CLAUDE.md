@@ -25,10 +25,11 @@ alinear huecos seguros. La puntuación crece con velocidad y riesgo (combo).
 ```
 Assets/
 ├── Scripts/Core/      GameManager, ZoneManager, ScoreManager, AudioManager,
-│                      LeaderboardManager, PauseInputHandler
+│                      LeaderboardManager, PauseInputHandler, AnalyticsManager,
+│                      SpeedFeedbackManager
 ├── Scripts/Gameplay/  HelixGenerator (central), HelixRotator, RingSegment,
 │                      BallController, ScoreTrigger, PowerupPickup,
-│                      RingAutoRotator, CameraFollow, IntroPlatform
+│                      RingAutoRotator, CameraFollow, IntroPlatform, NearMissSystem
 ├── Scripts/UI/        UIManager, MainMenuManager, PauseMenuManager
 ├── Scenes/            MainMenu.unity, Game.unity
 ├── Materials/, Mesh/, Textures/, Art/ArtBrief.md
@@ -58,6 +59,16 @@ Assets/
   segmento, hasta 10x; mejor score en PlayerPrefs).
 - **Powerups** (5 s): Fire (atraviesa bloqueos), Ghost (atraviesa peligro),
   Slow (reduce velocidad de caída).
+- **NearMissSystem** — sensor esférico en la esfera; detecta "casi-impacto" en
+  segmentos riesgosos (Dangerous/FireLocked) sin powerup que los neutralice y
+  alimenta el combo existente de `ScoreManager` (sin contador propio).
+- **SpeedFeedbackManager** — traduce combo y Surge en FOV y camera shake
+  (modelo de trauma de Eiserloh); solo escucha eventos, no conoce
+  `HelixGenerator` ni la física. Soporta intensidad reducida (low-end) vía
+  PlayerPrefs.
+- **AnalyticsManager** — observador puro de eventos de Game/Score/ZoneManager;
+  vuelca log + CSV por run en `Application.persistentDataPath`. Ningún
+  manager lo referencia.
 
 ## Convenciones de arquitectura (IMPORTANTES)
 
@@ -79,12 +90,15 @@ Assets/
 
 ## Notas de diseño / gotchas conocidos
 
-- **Conflicto de combo**: el plan V1.5 introduce un combo nuevo (near-miss,
-  x5/x10/x20/x50) que NO debe duplicar el combo ya existente en ScoreManager.
-  Unificar: el near-miss alimenta el combo existente, un solo contador.
+- **Combo unificado**: el near-miss (`NearMissSystem`) y el "saltar sin tocar
+  segmento" (`ScoreTrigger`) ya alimentan el mismo contador en `ScoreManager`
+  (`AddScoreWithCombo`) — no crear un segundo combo paralelo.
+- **Surge sin implementar**: `SpeedFeedbackManager` y `AnalyticsManager` ya
+  exponen los hooks (`NotifySurgeStart/End`, `LogSurgeActivated`) para la
+  mecánica de Surge del plan V1.5, pero ningún sistema los dispara todavía.
 - **Velocidad casi constante**: como la caída es a velocidad ~constante, atar FOV
-  y speed-lines a `CurrentSpeed/MaxSpeed` casi no se nota. Atarlos al **tier de
-  combo y al estado de Surge**, que sí varían.
+  y speed-lines a `CurrentSpeed/MaxSpeed` casi no se nota. Ya están atados al
+  **tier de combo y al estado de Surge** en `SpeedFeedbackManager`.
 
 ## Cómo quiero que trabajes (Claude Code)
 

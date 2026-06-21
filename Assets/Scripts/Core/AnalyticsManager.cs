@@ -38,6 +38,8 @@ public class AnalyticsManager : MonoBehaviour
         GameManager.OnRunEnd       += HandleRunEnd;
         ScoreManager.OnNewComboMax += HandleNewComboMax;
         ZoneManager.OnZoneReached  += HandleZoneReached;
+        AbyssEvents.OnSurgeActivated   += HandleSurgeStart;
+        AbyssEvents.OnSurgeDeactivated += HandleSurgeEnd;
     }
 
     void OnDisable()
@@ -46,6 +48,8 @@ public class AnalyticsManager : MonoBehaviour
         GameManager.OnRunEnd       -= HandleRunEnd;
         ScoreManager.OnNewComboMax -= HandleNewComboMax;
         ZoneManager.OnZoneReached  -= HandleZoneReached;
+        AbyssEvents.OnSurgeActivated   -= HandleSurgeStart;
+        AbyssEvents.OnSurgeDeactivated -= HandleSurgeEnd;
     }
 
     void HandleRunStart()
@@ -72,19 +76,25 @@ public class AnalyticsManager : MonoBehaviour
         WriteLog("zone_reached", $"run_index={runIndex}", $"zone={zoneName}", $"depth={depth}");
     }
 
-    // ── Stubs: near_miss y surge_activated son mecanicas del plan V1.5, aun no implementadas. ──
-    // TODO(V1.5): invocar desde el sistema de near-miss/surge cuando exista; en ese momento
+    void HandleSurgeStart()
+    {
+        int depth = ZoneManager.Instance != null ? ZoneManager.Instance.RingsPassed : 0;
+        WriteLog("surge_started", $"run_index={runIndex}", $"depth={depth}");
+    }
+
+    void HandleSurgeEnd()
+    {
+        int depth = ZoneManager.Instance != null ? ZoneManager.Instance.RingsPassed : 0;
+        WriteLog("surge_ended", $"run_index={runIndex}", $"depth={depth}");
+    }
+
+    // ── Stub: near_miss es mecanica del plan V1.5, aun no implementada. ──
+    // TODO(V1.5): invocar desde el sistema de near-miss cuando exista; en ese momento
     // conviene invertir esto a un evento (como GameManager.OnRunStart) en vez de la llamada directa.
     public static void LogNearMiss(int depth, int comboAtMiss)
     {
         if (Instance == null) return;
         Instance.WriteLog("near_miss", $"depth={depth}", $"combo={comboAtMiss}");
-    }
-
-    public static void LogSurgeActivated(int depth)
-    {
-        if (Instance == null) return;
-        Instance.WriteLog("surge_activated", $"depth={depth}");
     }
 
     void OnApplicationPause(bool pause)

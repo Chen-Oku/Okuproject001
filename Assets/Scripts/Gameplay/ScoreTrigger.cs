@@ -14,5 +14,6 @@ public class ScoreTrigger : MonoBehaviour
         ball.ResetSegmentTouched();
         ScoreManager.Instance.AddScoreWithCombo(skipped);
         ZoneManager.Instance?.NotifyRingPassed();
+        SurgeManager.Instance?.OnRingSafeCleared();
     }
 }

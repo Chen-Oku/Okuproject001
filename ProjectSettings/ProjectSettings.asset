@@ -842,7 +842,10 @@ PlayerSettings:
   webGLCloseOnQuit: 0
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
-  scriptingDefineSymbols: {}
+  scriptingDefineSymbols:
+    Android: UNITY_RENDER_PIPELINES_UNIVERSAL
+    Standalone: UNITY_RENDER_PIPELINES_UNIVERSAL
+    Windows Store Apps: UNITY_RENDER_PIPELINES_UNIVERSAL
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

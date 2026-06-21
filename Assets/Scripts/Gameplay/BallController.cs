@@ -179,6 +179,8 @@ public class BallController : MonoBehaviour
     {
         if (isDead) return;
 
+        SurgeManager.Instance?.OnPlayerHit();
+
         if (HasShield)
         {
             HasShield = false;

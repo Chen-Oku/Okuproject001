@@ -31,10 +31,12 @@ public class ScoreManager : MonoBehaviour
     // El near-miss alimenta el mismo combo que el skip de anillo: un solo contador.
     void HandleNearMiss(RingSegment segment) => AddScoreWithCombo(skipped: true);
 
+    static int SurgeMultiplier => SurgeManager.Instance != null ? SurgeManager.Instance.ScoreMultiplier : 1;
+
     // Mantener compatibilidad con cualquier llamada directa existente
     public void AddScore(int amount = 1)
     {
-        Score += amount;
+        Score += amount * SurgeMultiplier;
         UIManager.Instance.UpdateScore(Score);
     }
 
@@ -45,7 +47,7 @@ public class ScoreManager : MonoBehaviour
         else
             ComboStreak = 0;
 
-        int points = Mathf.Max(1, ComboStreak);
+        int points = Mathf.Max(1, ComboStreak) * SurgeMultiplier;
         Score += points;
 
         if (ComboStreak > ComboMax)

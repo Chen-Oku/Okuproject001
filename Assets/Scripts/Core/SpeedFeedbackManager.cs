@@ -76,6 +76,8 @@ public class SpeedFeedbackManager : MonoBehaviour
         RingSegment.OnSegmentImpact  += HandleSegmentImpact;
         GameManager.OnRunStart       += HandleRunStart;
         GameManager.OnRunEnd         += HandleRunEnd;
+        AbyssEvents.OnSurgeActivated   += NotifySurgeStart;
+        AbyssEvents.OnSurgeDeactivated += NotifySurgeEnd;
     }
 
     void OnDisable()
@@ -85,6 +87,8 @@ public class SpeedFeedbackManager : MonoBehaviour
         RingSegment.OnSegmentImpact  -= HandleSegmentImpact;
         GameManager.OnRunStart       -= HandleRunStart;
         GameManager.OnRunEnd         -= HandleRunEnd;
+        AbyssEvents.OnSurgeActivated   -= NotifySurgeStart;
+        AbyssEvents.OnSurgeDeactivated -= NotifySurgeEnd;
     }
 
     void Update()
@@ -182,9 +186,8 @@ public class SpeedFeedbackManager : MonoBehaviour
         PlayerPrefs.Save();
     }
 
-    // Surge (mecanica V1.5 aun no implementada): un futuro SurgeSystem llamara
-    // estos metodos directamente, igual que AnalyticsManager.LogSurgeActivated.
-    // Los [ContextMenu] son solo para poder probarlos a mano en el Editor.
+    // Disparados via suscripcion a AbyssEvents.OnSurgeActivated/OnSurgeDeactivated (ver OnEnable).
+    // Los [ContextMenu] siguen disponibles para poder probarlos a mano en el Editor.
     [ContextMenu("Debug: Surge Start")]
     public void NotifySurgeStart()
     {
