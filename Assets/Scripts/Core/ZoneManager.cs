@@ -53,6 +53,7 @@ public class ZoneManager : MonoBehaviour
         ApplyZoneVisual();
         UIManager.Instance?.ShowZoneAnnouncement(ZoneName(CurrentZone));
         OnZoneReached?.Invoke(ZoneName(CurrentZone), ringsPassed);
+        AbyssEvents.TriggerZoneTransition();
     }
 
     void ApplyZoneVisual()

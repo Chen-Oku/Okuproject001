@@ -59,6 +59,7 @@ public class ScoreManager : MonoBehaviour
         UIManager.Instance.UpdateScore(Score);
         UIManager.Instance.UpdateCombo(ComboStreak);
         OnComboChanged?.Invoke(ComboStreak);
+        AbyssEvents.TriggerComboChanged(ComboStreak);
     }
 
     public void SaveBestScore()

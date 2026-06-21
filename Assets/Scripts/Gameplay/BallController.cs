@@ -180,6 +180,7 @@ public class BallController : MonoBehaviour
         if (isDead) return;
 
         SurgeManager.Instance?.OnPlayerHit();
+        AbyssEvents.TriggerImpact(0.7f);
 
         if (HasShield)
         {

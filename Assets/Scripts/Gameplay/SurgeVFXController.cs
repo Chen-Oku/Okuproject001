@@ -26,7 +26,8 @@ public class SurgeVFXController : MonoBehaviour
     [Header("Aura (durante el Surge)")]
     [SerializeField] float auraEmissionRate = 25f;
     [SerializeField] float auraLifetime = 0.8f;
-    [SerializeField] float auraSize = 0.2f;
+    [SerializeField] float auraSizeMin = 0.12f;
+    [SerializeField] float auraSizeMax = 0.3f;
     [SerializeField] float auraRadius = 0.6f;
 
     [Header("Trail de la esfera")]
@@ -63,10 +64,13 @@ public class SurgeVFXController : MonoBehaviour
     {
         if (enableParticles)
         {
-            var particleMaterial = BuildParticleMaterial(primaryColor);
+            // El sprite circular solo va en burst/aura: el TrailRenderer
+            // estira la textura a lo largo de toda la cinta, asi que con un
+            // circulo se veria como una lente en vez de una linea continua.
+            var particleMaterial = BuildParticleMaterial(primaryColor, BuildSoftCircleTexture());
             BuildBurstSystem(particleMaterial);
             BuildAuraSystem(particleMaterial);
-            BuildTrail(particleMaterial);
+            BuildTrail(BuildParticleMaterial(primaryColor));
         }
 
 #if UNITY_RENDER_PIPELINES_UNIVERSAL
@@ -132,7 +136,7 @@ public class SurgeVFXController : MonoBehaviour
         main.duration = burstLifetime;
         main.startLifetime = burstLifetime;
         main.startSpeed = burstSpeed;
-        main.startSize = burstSize;
+        main.startSize = new ParticleSystem.MinMaxCurve(0.05f, 0.45f);
         main.startColor = primaryColor;
         main.maxParticles = BurstMaxParticles;
         main.simulationSpace = ParticleSystemSimulationSpace.World;
@@ -149,12 +153,16 @@ public class SurgeVFXController : MonoBehaviour
         colorOverLifetime.enabled = true;
         colorOverLifetime.color = BuildFadeGradient(primaryColor, secondaryColor);
 
-        // Stretch + velocityScale alargan cada particula en su direccion de
-        // movimiento, dando el aspecto de chispa en vez de punto redondo.
+        // Crecen un poco al nacer y luego encogen hasta desaparecer, en vez
+        // de mantener un tamano fijo durante toda la vida.
+        var sizeOverLifetime = burstSystem.sizeOverLifetime;
+        sizeOverLifetime.enabled = true;
+        sizeOverLifetime.size = BuildGrowShrinkSizeCurve();
+
+        // Billboard deja las particulas como circulos/esferas; lengthScale y
+        // velocityScale solo aplican en modo Stretch, por eso ya no se usan.
         var psRenderer = burstSystem.GetComponent<ParticleSystemRenderer>();
-        psRenderer.renderMode = ParticleSystemRenderMode.Stretch;
-        psRenderer.lengthScale = 2f;
-        psRenderer.velocityScale = 0.3f;
+        psRenderer.renderMode = ParticleSystemRenderMode.Billboard;
         psRenderer.material = material;
     }
 
@@ -172,7 +180,7 @@ public class SurgeVFXController : MonoBehaviour
         main.playOnAwake = false;
         main.startLifetime = auraLifetime;
         main.startSpeed = 0.5f;
-        main.startSize = auraSize;
+        main.startSize = new ParticleSystem.MinMaxCurve(auraSizeMin, auraSizeMax);
         main.startColor = secondaryColor;
         main.maxParticles = AuraMaxParticles;
         main.simulationSpace = ParticleSystemSimulationSpace.World;
@@ -187,6 +195,13 @@ public class SurgeVFXController : MonoBehaviour
         var colorOverLifetime = auraSystem.colorOverLifetime;
         colorOverLifetime.enabled = true;
         colorOverLifetime.color = BuildFadeGradient(secondaryColor, primaryColor);
+
+        // Mismo crecimiento/encogido que el burst: sin esto cada particula
+        // del aura mantiene su tamano random fijo desde que nace hasta que
+        // muere, en vez de variar a lo largo de su vida.
+        var sizeOverLifetime = auraSystem.sizeOverLifetime;
+        sizeOverLifetime.enabled = true;
+        sizeOverLifetime.size = BuildGrowShrinkSizeCurve();
 
         var psRenderer = auraSystem.GetComponent<ParticleSystemRenderer>();
         psRenderer.renderMode = ParticleSystemRenderMode.Billboard;
@@ -216,24 +231,68 @@ public class SurgeVFXController : MonoBehaviour
         return gradient;
     }
 
+    // Curva de tamano compartida por burst y aura: nace al 60%, crece al
+    // maximo a un 20% de su vida y se encoge hasta 0 antes de morir.
+    static ParticleSystem.MinMaxCurve BuildGrowShrinkSizeCurve()
+    {
+        var curve = new AnimationCurve(
+            new Keyframe(0f, 0.6f),
+            new Keyframe(0.2f, 1.0f),
+            new Keyframe(1f, 0.0f));
+        return new ParticleSystem.MinMaxCurve(1f, curve);
+    }
+
+    const int CircleTextureSize = 32;
+    static Texture2D circleTexture;
+
+    // Sprite circular con caida de alfa hacia el borde. Sin esta textura el
+    // ParticleSystemRenderer en modo Billboard pinta el quad completo y las
+    // particulas se ven cuadradas en vez de redondas.
+    static Texture2D BuildSoftCircleTexture()
+    {
+        if (circleTexture != null) return circleTexture;
+
+        circleTexture = new Texture2D(CircleTextureSize, CircleTextureSize, TextureFormat.RGBA32, false);
+        circleTexture.wrapMode = TextureWrapMode.Clamp;
+
+        var center = new Vector2((CircleTextureSize - 1) * 0.5f, (CircleTextureSize - 1) * 0.5f);
+        var pixels = new Color32[CircleTextureSize * CircleTextureSize];
+        for (int y = 0; y < CircleTextureSize; y++)
+        {
+            for (int x = 0; x < CircleTextureSize; x++)
+            {
+                float dist = Vector2.Distance(new Vector2(x, y), center) / center.magnitude;
+                float alpha = Mathf.Clamp01(1f - dist);
+                pixels[y * CircleTextureSize + x] = new Color(1f, 1f, 1f, alpha * alpha);
+            }
+        }
+        circleTexture.SetPixels32(pixels);
+        circleTexture.Apply();
+        return circleTexture;
+    }
+
     // Shader unlit de particulas de URP; si el proyecto no lo tiene disponible
     // cae a Sprites/Default, el unico shader fijo garantizado bajo cualquier
     // pipeline. Sprites/Default no expone _SrcBlend/_DstBlend como propiedades
     // (el blend queda fijo en el shader), asi que el fallback no logra additive
     // real, solo alpha blend normal.
-    static Material BuildParticleMaterial(Color baseColor)
+    static Material BuildParticleMaterial(Color baseColor, Texture2D sprite = null)
     {
         Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
         bool isUrpShader = shader != null;
         if (shader == null) shader = Shader.Find("Sprites/Default");
 
         var material = new Material(shader) { color = baseColor };
+        if (sprite != null) material.mainTexture = sprite;
 
         if (isUrpShader)
         {
             material.SetFloat("_Surface", 1f);
             material.SetFloat("_Blend", 2f);
-            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            // SrcAlpha en vez de One: con blend One/One el alfa del sprite
+            // (la caida circular) no afecta el resultado y el additive pinta
+            // el quad entero, por eso se veian cuadradas pese a la textura.
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
             material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
             material.SetFloat("_ZWrite", 0f);
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
