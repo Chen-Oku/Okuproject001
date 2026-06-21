@@ -21,12 +21,20 @@ public class MainMenuManager : MonoBehaviour
     [SerializeField] Toggle musicToggle;
     [SerializeField] Toggle sfxToggle;
 
+    [Header("Currency")]
+    [SerializeField] TextMeshProUGUI shardsText; // Asignar en Inspector; puede ser null
+
     [Header("Config")]
     [SerializeField] string gameSceneName = "Game";
+
+    void OnEnable()  => CurrencyManager.OnShardsChanged += UpdateShards;
+    void OnDisable() => CurrencyManager.OnShardsChanged -= UpdateShards;
 
     void Start()
     {
         ShowPanel(mainPanel);
+
+        UpdateShards(CurrencyManager.Instance != null ? CurrencyManager.Instance.Get() : 0);
 
         if (AudioManager.Instance == null) return;
         if (musicToggle != null) musicToggle.isOn = AudioManager.Instance.MusicEnabled;
@@ -128,5 +136,10 @@ public class MainMenuManager : MonoBehaviour
     void PlayClick()
     {
         AudioManager.Instance?.PlayButtonClick();
+    }
+
+    void UpdateShards(int amount)
+    {
+        if (shardsText != null) shardsText.text = amount.ToString();
     }
 }

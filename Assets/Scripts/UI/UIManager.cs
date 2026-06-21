@@ -9,6 +9,7 @@ public class UIManager : MonoBehaviour
     [SerializeField] TextMeshProUGUI scoreText;
     [SerializeField] TextMeshProUGUI comboText;    // Asignar en Inspector; puede ser null
     [SerializeField] TextMeshProUGUI zoneText;    // Asignar en Inspector; puede ser null
+    [SerializeField] TextMeshProUGUI shardsText;  // Asignar en Inspector; puede ser null
     [SerializeField] GameObject gameOverPanel;
     [SerializeField] TextMeshProUGUI finalScoreText;
     [SerializeField] TextMeshProUGUI bestScoreText;
@@ -34,9 +35,23 @@ public class UIManager : MonoBehaviour
         if (nameInputField != null) nameInputField.characterLimit = LeaderboardManager.MaxNameLength;
     }
 
+    void OnEnable()  => CurrencyManager.OnShardsChanged += UpdateShards;
+    void OnDisable() => CurrencyManager.OnShardsChanged -= UpdateShards;
+
+    void Start()
+    {
+        UpdateShards(CurrencyManager.Instance != null ? CurrencyManager.Instance.Get() : 0);
+    }
+
     public void UpdateScore(int score)
     {
         scoreText.text = score.ToString();
+    }
+
+    void UpdateShards(int amount)
+    {
+        if (shardsText == null) return;
+        shardsText.text = amount.ToString();
     }
 
     public void UpdateCombo(int streak)
